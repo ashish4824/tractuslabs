@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import Button from '@/components/ui/Button';
 import { clientService } from '@/services/clients';
+import { Edit, Trash } from 'lucide-react';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const[monthFillter,setMonthFillter] = useState(false);
   const [update, setUpdate] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -18,9 +20,15 @@ export default function ClientsPage() {
     fixedAmount: '',
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMonths, setSelectedMonths] = useState([]);
   const [csvFile, setCsvFile] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const itemsPerPageOptions = [1, 10, 25, 50];
 
   const fetchClients = async () => {
     try {
@@ -117,7 +125,15 @@ export default function ClientsPage() {
 
     try {
       await clientService.deleteClient(clientId);  // Changed from delete to deleteClient
-      setClients(clients.filter(client => client.id !== clientId));
+      setClients(clients.filter(client => client._id !== clientId));
+      
+      // Reset to first page if we're on the last page and it's now empty
+      const newFilteredClients = clients.filter(client => client._id !== clientId)
+        .filter(client => client.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      const newTotalPages = Math.ceil(newFilteredClients.length / itemsPerPage);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      }
     } catch (err) {
       setError(err.message || 'Failed to delete client');
     }
@@ -154,10 +170,34 @@ const handleUpdate = async (clientId) => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Add this function to filter clients
-  const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // Modify the filteredClients to consider the selected month
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.phone && client.phone.toString().includes(searchTerm)) ||
+    (client.fixedAmount && client.fixedAmount.toString().toLowerCase().includes(searchTerm.toLowerCase()))
   );
+  // Pagination logic
+  const indexOfLastClient = currentPage * itemsPerPage;
+  const indexOfFirstClient = indexOfLastClient - itemsPerPage;
+  const currentClients = filteredClients.slice(indexOfFirstClient, indexOfLastClient);
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+  
+  // Change page
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  
+  // Go to next page
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+  
+  // Go to previous page
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   if (loading) {
     return (
@@ -169,17 +209,58 @@ const handleUpdate = async (clientId) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
-        <div className="flex items-center gap-4">
-          <input
-            type="text"
-            placeholder="Search by name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-black focus:ring-indigo-500"
-          />
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
+            <input
+              type="text"
+              placeholder="Search by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-black focus:ring-indigo-500"
+            />
+            <button className='w-full sm:w-auto bg-blue-500 p-2 rounded-md text-white' onClick={()=>setMonthFillter(true)}>Month Filter</button>
+            {monthFillter && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg p-6 w-80 shadow-lg max-h-[90vh] overflow-y-auto mx-4">
+            <h2 className="text-lg font-bold mb-4 text-center text-black">Select Months</h2>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {months.map((month) => (
+                <div key={month} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    value={month}
+                    id={month}
+                    checked={selectedMonths.includes(month)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedMonths([...selectedMonths, month]);
+                      } else {
+                        setSelectedMonths(selectedMonths.filter(m => m !== month));
+                      }
+                    }}
+                    className="mr-2 size-8 rounded-xl"
+                  />
+                  <label htmlFor={month} className="text-black cursor-pointer">{month}</label>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setMonthFillter(false)}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full sm:w-auto"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+          </div>
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0">
             <input
               type="file"
               accept=".csv"
@@ -190,20 +271,33 @@ const handleUpdate = async (clientId) => {
             />
             <label
               htmlFor="csv-file-input"
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-300 transition-colors"
+              className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-300 transition-colors text-center"
             >
               {csvFile ? csvFile.name : 'Choose CSV'}
             </label>
             <Button 
               onClick={handleCsvUpload} 
-              // className='bg-blue-500 text-black p-2 rounded-md'
               variant="secondary"
               isLoading={uploadLoading}
               disabled={!csvFile || uploadLoading}
+              className="w-full sm:w-auto"
             >
               Upload CSV
             </Button>
-            <Button onClick={() => setShowAddModal(true)}>Add Client</Button>
+            <Button 
+              onClick={() => {setShowAddModal(true),setFormData(
+                {
+                  name: '',
+                  email: '',
+                  phone: '',
+                  address: '',
+                  fixedAmount: '',
+                }
+              )}} 
+              className="w-full sm:w-auto"
+            >
+              Add Client
+            </Button>
           </div>
         </div>
       </div>
@@ -224,43 +318,68 @@ const handleUpdate = async (clientId) => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fixed Amount</th>
-                    {months.map(month => (
-                      <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month}</th>
-                    ))}
+                    {selectedMonths.length > 0 ? (
+                      selectedMonths.map(month => (
+                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month}</th>
+                      ))
+                    ) : (
+                      months.map(month => (
+                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month}</th>
+                      ))
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edit</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredClients.map(client => (  // Changed from clients to filteredClients
+                  {currentClients.map(client => (
                     <tr key={client._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{client.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{client.phone}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₹{Number(client.fixedAmount || 0).toFixed(2)}</td>
-                      {months.map(month => {
-                        const payment = client.payments?.['2025']?.[month] || {};
-                        return (
-                          
-                          <td key={month} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <div className="flex flex-col items-center">
-                              <input
-                                type="text"
-                                value={payment.amount || 0}
-                                className="w-16 text-center border border-gray-300 rounded"
-                                readOnly
-                              />
-                              <span className={`text-xs ${payment.isPaid ? 'text-green-600' : 'text-red-600'}`}>
-                                {payment.isPaid ? '✔' : '✘'}
-                              </span>
-                              <span className="text-xs text-gray-500">Bal: {payment.balance || 0}</span>
-                            </div>
-                          </td>
-                          
-                          
-                        );
-                      })}
-                      <td><button className='bg-blue-500 text-white p-2 rounded-md' onClick={()=>handleEdit(client)}>Edit</button> </td>
-                      <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handleDelete(client._id)}>Delete</button> </td>
+                      <td className="px-2 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{client.name}</td>
+                      <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">{client.phone}</td>
+                      <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">₹{Number(client.fixedAmount || 0).toFixed(2)}</td>
+                      {selectedMonths.length > 0 ? (
+                        selectedMonths.map(month => {
+                          const payment = client.payments?.['2025']?.[month] || {};
+                          return (
+                            <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.isPaid ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
+                                <input
+                                  type="text"
+                                  value={payment.amount || 0}
+                                  className="w-16 text-center border border-gray-300 rounded"
+                                  readOnly
+                                />
+                                <span className={`text-xs ${payment.isPaid ? 'text-green-600' : 'text-red-600'}`}>
+                                  {payment.isPaid ? '✔' : '✘'}{payment.isPaid}
+                                </span>
+                                <span className="text-xs text-white">Bal: {payment.balance || 0}</span>
+                              </div>
+                            </td>
+                          );
+                        })
+                      ) : (
+                        months.map(month => {
+                          const payment = client.payments?.['2025']?.[month] || {};
+                          return (
+                            <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.isPaid ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
+                                <input
+                                  type="text"
+                                  value={payment.amount || 0}
+                                  className="w-16 text-center border border-gray-300 rounded"
+                                  readOnly
+                                />
+                                <span className={`text-xs ${payment.isPaid ? 'text-green-600' : 'text-red-600'}`}>
+                                  {payment.isPaid ? '✔' : '✘'}{payment.isPaid}
+                                </span>
+                                <span className="text-xs text-white">Bal: {payment.balance || 0}</span>
+                              </div>
+                            </td>
+                          );
+                        })
+                      )}
+                      <td><button className='bg-blue-500 text-white p-2 rounded-md' onClick={()=>handleEdit(client)}><Edit/></button> </td>
+                      <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handleDelete(client._id)}><Trash /></button> </td>
                     </tr>
                   ))}
                 </tbody>
@@ -269,6 +388,123 @@ const handleUpdate = async (clientId) => {
           </div>
         </div>
       </div>
+
+      {/* Pagination Controls */}
+      {filteredClients.length > 0 && (
+        <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-2 mt-4 pb-6">
+          <div className="flex items-center space-x-2">
+            <Button 
+              onClick={prevPage} 
+              disabled={currentPage === 1}
+              variant="secondary"
+              size="small"
+            >
+              Previous
+            </Button>
+            
+            <div className="flex space-x-1">
+              {totalPages <= 7 ? (
+                // Show all page numbers if there are 7 or fewer
+                Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
+                  <button
+                    key={number}
+                    onClick={() => paginate(number)}
+                    className={`px-3 py-1 rounded ${currentPage === number ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  >
+                    {number}
+                  </button>
+                ))
+              ) : (
+                // Show limited page numbers with ellipsis for many pages
+                <>
+                  {/* First page */}
+                  <button
+                    onClick={() => paginate(1)}
+                    className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  >
+                    1
+                  </button>
+                  
+                  {/* Ellipsis or number */}
+                  {currentPage > 3 && <span className="px-2">...</span>}
+                  
+                  {/* Pages around current page */}
+                  {Array.from(
+                    { length: Math.min(5, totalPages) },
+                    (_, i) => {
+                      let pageNum;
+                      if (currentPage <= 3) {
+                        // Near the start
+                        pageNum = i + 2;
+                      } else if (currentPage >= totalPages - 2) {
+                        // Near the end
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        // Middle
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      // Only show if in valid range (2 to totalPages-1)
+                      return pageNum > 1 && pageNum < totalPages ? (
+                        <button
+                          key={pageNum}
+                          onClick={() => paginate(pageNum)}
+                          className={`px-3 py-1 rounded ${currentPage === pageNum ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                        >
+                          {pageNum}
+                        </button>
+                      ) : null;
+                    }
+                  ).filter(Boolean)}
+                  
+                  {/* Ellipsis or number */}
+                  {currentPage < totalPages - 2 && <span className="px-2">...</span>}
+                  
+                  {/* Last page */}
+                  <button
+                    onClick={() => paginate(totalPages)}
+                    className={`px-3 py-1 rounded ${currentPage === totalPages ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+            </div>
+            
+            <Button 
+              onClick={nextPage} 
+              disabled={currentPage === totalPages}
+              variant="secondary"
+              size="small"
+            >
+              Next
+            </Button>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-gray-500">
+              Page {currentPage} of {totalPages || 1} | Showing {indexOfFirstClient + 1}-{Math.min(indexOfLastClient, filteredClients.length)} of {filteredClients.length} clients
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label htmlFor="itemsPerPage" className="text-sm text-gray-700">Items per page:</label>
+              <select
+                id="itemsPerPage"
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1); // Reset to first page when changing items per page
+                }}
+                className="border border-gray-300 rounded px-2 py-1 text-sm text-black"
+              >
+                {itemsPerPageOptions.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Client Modal */}
       {showAddModal && (
@@ -352,5 +588,4 @@ const handleUpdate = async (clientId) => {
         </div>
       )}
     </div>
-  );
-}
+  )}

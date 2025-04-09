@@ -68,7 +68,7 @@ export default function LoginPage() {
                 name="email"
                 type="email"
                 required
-                className="block w-full px-4 py-3 rounded-lg border border-gray-300 shadow-sm placeholder-gray-400 
+                className="block w-full text-black px-4 py-3 rounded-lg border border-gray-300 shadow-sm placeholder-gray-400 
                          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
                          transition-all duration-200"
                 placeholder="Enter your email"
@@ -86,7 +86,7 @@ export default function LoginPage() {
                 name="password"
                 type="password"
                 required
-                className="block w-full px-4 py-3 rounded-lg border border-gray-300 shadow-sm placeholder-gray-400 
+                className="block w-full px-4 py-3 text-black rounded-lg border border-gray-300 shadow-sm placeholder-gray-400 
                          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
                          transition-all duration-200"
                 placeholder="Enter your password"

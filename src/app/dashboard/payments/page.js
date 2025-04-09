@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import { clientService, paymentService } from '@/services/clients';
+import DateFormate from '@/components/DateFormate';
 
 export default function PaymentsPage() {
   const [clients, setClients] = useState([]);
@@ -15,6 +16,8 @@ export default function PaymentsPage() {
     enteredAmount: '',
     month: '',
     year: new Date().getFullYear(),
+    message:'',
+    isPaid:true
   });
 
   const months = [
@@ -54,6 +57,8 @@ export default function PaymentsPage() {
         enteredAmount: '',
         month: '',
         year: new Date().getFullYear(),
+        message:'',
+        isPaid:''
       });
       setShowAddModal(false);
     } catch (err) {
@@ -106,7 +111,6 @@ export default function PaymentsPage() {
           <div className="text-sm text-red-700">{error}</div>
         </div>
       )}
-
       <div className="max-w-xs">
         <label className="block text-sm font-medium text-gray-700">Select Client</label>
         <select
@@ -140,6 +144,9 @@ export default function PaymentsPage() {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Date
                       </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                       <span className='line-clamp-1'> Message</span> 
+                      </th>
                       <th scope="col" className="relative px-6 py-3 text-black">
                         <span className="text-gray-500">Actions</span>
                       </th>
@@ -155,12 +162,17 @@ export default function PaymentsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            ${Number(payment.enteredAmount.toFixed(2))}
+                          ₹{Number(payment.enteredAmount.toFixed(2))}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {new Date(payment.createdAt).toLocaleDateString()}
+                            {DateFormate(payment.createdAt)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {payment.message}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -221,6 +233,18 @@ export default function PaymentsPage() {
                   className="mt-1 block w-full p-2 border-[1px] text-black rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   value={formData.year}
                   onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">message</label>
+                <textarea
+                  type="text"
+                  rows={3}
+                  placeholder="Enter a message"
+                  required
+                  className="mt-1 block w-full p-2 border-[1px] text-black rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 />
               </div>
               <div className="flex justify-end space-x-3">
