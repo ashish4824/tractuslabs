@@ -175,17 +175,30 @@ console.log(payments);
   
 const handlePaymentUpdate = async (clientId) => {
   try {
-    if (!payments.enteredAmount || !payments.month) {
-      setError('Please enter amount and select month');
+    const client = clients.find(c => c._id === clientId);
+    if (!client) throw new Error('Client not found');
+    if (!payments.month || !payments.enteredAmount) {
+      setError('Please select a month and enter an amount');
       return;
     }
 
     const paymentData = {
-      payments: [{
-        year: currentYear,
-        month: payments.month,
-        enteredAmount: Number(payments.enteredAmount)
-      }]
+      payments: months.map(month => {
+        const existingPayment = client.payments?.[currentYear]?.[month] || {};
+        const isCurrentMonth = month === payments.month;
+        const amount = isCurrentMonth ? Number(payments.enteredAmount) : Number(existingPayment.amount || 0);
+        const isPaid = true;
+        const fixedAmount = Number(client.fixedAmount || 0);
+        const balance = fixedAmount - amount;
+
+        return {
+          year: currentYear,
+          month,
+          enteredAmount: amount,
+          isPaid,
+          balance
+        };
+      })
     };
 
     const response = await fetch(`https://client-app-blush.vercel.app/payments/${clientId}/payments`, {
@@ -200,10 +213,10 @@ const handlePaymentUpdate = async (clientId) => {
     if (!response.ok) {
       throw new Error('Failed to update payment');
     }
+
     const updatedClients = await clientService.getAll();
     setClients(updatedClients);
     
-    // Reset payment form
     setPayments({
       enteredAmount: '',
       month: '',
@@ -391,7 +404,7 @@ const handlePaymentUpdate = async (clientId) => {
                           const payment = client.payments?.[currentYear]?.[month] || {};
                           return (
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className={`flex flex-col items-center p-1 rounded-md ${Number(payment.amount)===0 ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
+                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.amount>0 ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
                                 <input
                                   type="number"
                                   value={payments.enteredAmount|| payment.amount || 0}
@@ -402,7 +415,7 @@ const handlePaymentUpdate = async (clientId) => {
                                   })}
                                   className="w-16 text-center border border-gray-300 rounded text-black"
                                 />
-                                <span className={`text-xs ${Number(payment.amount)<=0 ? 'text-red-500' : 'text-green-600'}`}>
+                                <span className={`text-xs ${payment.isPaid ? 'text-red-500' : 'text-green-600'}`}>
                                   {payment.isPaid ? '✔' : '✘'}
                                 </span>
                                 <span className="text-xs text-white">Bal: {payment.balance || 0}</span>
