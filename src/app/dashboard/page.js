@@ -41,7 +41,7 @@ export default function DashboardPage() {
           recentPayments,
         });
       } catch (err) {
-        setError(err.message || 'Failed to fetch dashboard data');
+        // setError(err.message || 'Failed to fetch dashboard data');
       } finally {
         setLoading(false);
       }

@@ -89,13 +89,7 @@ export default function PaymentsPage() {
   }, [selectedClient]);
 
 
-  if (loading && selectedClient) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-      </div>
-    );
-  }
+ 
 
   return (
     <div className="space-y-6">

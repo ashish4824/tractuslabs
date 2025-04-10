@@ -382,15 +382,17 @@ const handlePaymentUpdate = async (clientId) => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fixed Amount</th>
                     {selectedMonths.length > 0 ? (
                       selectedMonths.map(month => (
-                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month}</th>
+                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month.slice(0,3)}</th>
                       ))
                     ) : (
                       months.map(month => (
-                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month}</th>
+                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month.slice(0,3)}</th>
                       ))
                     )}
+                    
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"> Save</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" >Action </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -450,6 +452,7 @@ const handlePaymentUpdate = async (clientId) => {
                       )}
                       <td><button className='bg-blue-500 text-white p-2 rounded-md' onClick={()=>handleEdit(client)}><Edit/></button> </td>
                       <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handlePaymentUpdate(client._id)}>save</button> </td>
+                      <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handleDelete(client._id)}><Trash/></button> </td>
                     </tr>
                   ))}
                 </tbody>
