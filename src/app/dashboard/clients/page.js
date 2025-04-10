@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Button from '@/components/ui/Button';
 import { clientService } from '@/services/clients';
+import { paymentService } from '@/services/payments';
 import { Edit, Trash } from 'lucide-react';
 
 export default function ClientsPage() {
@@ -19,11 +20,17 @@ export default function ClientsPage() {
     address: '',
     fixedAmount: '',
   });
+  const [payments, setPayments] = useState({
+    enteredAmount:'',
+    month: '',
+    year: '',
+  })
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonths, setSelectedMonths] = useState([]);
   const [csvFile, setCsvFile] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -164,6 +171,48 @@ const handleUpdate = async (clientId) => {
     setError(err.message || 'Failed to update client');
   }
 };
+console.log(payments);
+  
+const handlePaymentUpdate = async (clientId) => {
+  try {
+    if (!payments.enteredAmount || !payments.month) {
+      setError('Please enter amount and select month');
+      return;
+    }
+
+    const paymentData = {
+      payments: [{
+        year: currentYear,
+        month: payments.month,
+        enteredAmount: Number(payments.enteredAmount)
+      }]
+    };
+
+    const response = await fetch(`https://client-app-blush.vercel.app/payments/${clientId}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(paymentData)
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update payment');
+    }
+    const updatedClients = await clientService.getAll();
+    setClients(updatedClients);
+    
+    // Reset payment form
+    setPayments({
+      enteredAmount: '',
+      month: '',
+      year: currentYear
+    });
+  } catch (err) {
+    setError(err.message || 'Failed to update payment');
+  }
+};
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -210,7 +259,7 @@ const handleUpdate = async (clientId) => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
-        <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
+        <button  className="text-2xl font-semibold text-gray-900">Clients</button>
         <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
             <input
@@ -339,18 +388,22 @@ const handleUpdate = async (clientId) => {
                       <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">₹{Number(client.fixedAmount || 0).toFixed(2)}</td>
                       {selectedMonths.length > 0 ? (
                         selectedMonths.map(month => {
-                          const payment = client.payments?.['2025']?.[month] || {};
+                          const payment = client.payments?.[currentYear]?.[month] || {};
                           return (
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.isPaid ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
+                              <div className={`flex flex-col items-center p-1 rounded-md ${Number(payment.amount)===0 ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
                                 <input
-                                  type="text"
-                                  value={payment.amount || 0}
-                                  className="w-16 text-center border border-gray-300 rounded"
-                                  readOnly
+                                  type="number"
+                                  value={payments.enteredAmount|| payment.amount || 0}
+                                  onChange={(e) => setPayments({
+                                    enteredAmount: e.target.value,
+                                    month: month,
+                                    year: currentYear
+                                  })}
+                                  className="w-16 text-center border border-gray-300 rounded text-black"
                                 />
-                                <span className={`text-xs ${payment.isPaid ? 'text-green-600' : 'text-red-600'}`}>
-                                  {payment.isPaid ? '✔' : '✘'}{payment.isPaid}
+                                <span className={`text-xs ${Number(payment.amount)<=0 ? 'text-red-500' : 'text-green-600'}`}>
+                                  {payment.isPaid ? '✔' : '✘'}
                                 </span>
                                 <span className="text-xs text-white">Bal: {payment.balance || 0}</span>
                               </div>
@@ -359,18 +412,22 @@ const handleUpdate = async (clientId) => {
                         })
                       ) : (
                         months.map(month => {
-                          const payment = client.payments?.['2025']?.[month] || {};
+                          const payment = client.payments?.[currentYear]?.[month] || {};
                           return (
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
                               <div className={`flex flex-col items-center p-1 rounded-md ${payment.isPaid ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
                                 <input
-                                  type="text"
-                                  value={payment.amount || 0}
-                                  className="w-16 text-center border border-gray-300 rounded"
-                                  readOnly
+                                  type="number"
+                                  value={payments.enteredAmount|| payment.amount || 0}
+                                  onChange={(e) => setPayments({
+                                    enteredAmount: e.target.value,
+                                    month: month,
+                                    year: currentYear
+                                  })}
+                                  className="w-16 text-center border border-gray-300 rounded text-black"
                                 />
                                 <span className={`text-xs ${payment.isPaid ? 'text-green-600' : 'text-red-600'}`}>
-                                  {payment.isPaid ? '✔' : '✘'}{payment.isPaid}
+                                  {payment.isPaid ? '✔' : '✘'}
                                 </span>
                                 <span className="text-xs text-white">Bal: {payment.balance || 0}</span>
                               </div>
@@ -379,7 +436,7 @@ const handleUpdate = async (clientId) => {
                         })
                       )}
                       <td><button className='bg-blue-500 text-white p-2 rounded-md' onClick={()=>handleEdit(client)}><Edit/></button> </td>
-                      <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handleDelete(client._id)}><Trash /></button> </td>
+                      <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handlePaymentUpdate(client._id)}>save</button> </td>
                     </tr>
                   ))}
                 </tbody>

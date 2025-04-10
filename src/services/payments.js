@@ -17,7 +17,7 @@ export const paymentService = {
   },
 
   updatePayment: async (paymentId, paymentData) => {
-    return await api.put(`/payments/${paymentId}`, {
+    return await api.post(`/payments/${paymentId}/payments`, {
       ...paymentData,
       enteredAmount: parseFloat(paymentData.enteredAmount),
     });
