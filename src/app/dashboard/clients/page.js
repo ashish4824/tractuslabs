@@ -21,7 +21,7 @@ export default function ClientsPage() {
     fixedAmount: '',
   });
   const [payments, setPayments] = useState({
-    enteredAmount:'',
+    enteredAmount: {},
     month: '',
     year: '',
   })
@@ -177,7 +177,10 @@ const handlePaymentUpdate = async (clientId) => {
   try {
     const client = clients.find(c => c._id === clientId);
     if (!client) throw new Error('Client not found');
-    if (!payments.month || !payments.enteredAmount) {
+    
+    // Get the current month's payment amount
+    const currentMonthAmount = payments.enteredAmount[clientId]?.[payments.month];
+    if (!payments.month || !currentMonthAmount) {
       setError('Please select a month and enter an amount');
       return;
     }
@@ -186,8 +189,8 @@ const handlePaymentUpdate = async (clientId) => {
       payments: months.map(month => {
         const existingPayment = client.payments?.[currentYear]?.[month] || {};
         const isCurrentMonth = month === payments.month;
-        const amount = isCurrentMonth ? Number(payments.enteredAmount) : Number(existingPayment.amount || 0);
-        const isPaid = true;
+        const amount = isCurrentMonth ? Number(currentMonthAmount) : Number(existingPayment.amount || 0);
+        const isPaid = amount > 0;
         const fixedAmount = Number(client.fixedAmount || 0);
         const balance = fixedAmount - amount;
 
@@ -217,11 +220,16 @@ const handlePaymentUpdate = async (clientId) => {
     const updatedClients = await clientService.getAll();
     setClients(updatedClients);
     
-    setPayments({
-      enteredAmount: '',
+    // Reset only the current client's payment
+    setPayments(prev => ({
+      ...prev,
+      enteredAmount: {
+        ...prev.enteredAmount,
+        [clientId]: {}
+      },
       month: '',
       year: currentYear
-    });
+    }));
   } catch (err) {
     setError(err.message || 'Failed to update payment');
   }
@@ -406,15 +414,22 @@ const handlePaymentUpdate = async (clientId) => {
                           const payment = client.payments?.[currentYear]?.[month] || {};
                           return (
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.amount>0 ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
+                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.amount > 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
                                 <input
                                   type="number"
-                                  value={payments.enteredAmount|| payment.amount || 0}
-                                  onChange={(e) => setPayments({
-                                    enteredAmount: e.target.value,
+                                  value={payments.enteredAmount[client._id]?.[month] || payment.amount || 0}
+                                  onChange={(e) => setPayments(prev => ({
+                                    ...prev,
+                                    enteredAmount: {
+                                      ...prev.enteredAmount,
+                                      [client._id]: {
+                                        ...(prev.enteredAmount[client._id] || {}),
+                                        [month]: e.target.value
+                                      }
+                                    },
                                     month: month,
                                     year: currentYear
-                                  })}
+                                  }))}
                                   className="w-16 text-center border border-gray-300 rounded text-black"
                                 />
                                 <span className={`text-xs ${payment.isPaid ? 'text-red-500' : 'text-green-600'}`}>
@@ -430,15 +445,22 @@ const handlePaymentUpdate = async (clientId) => {
                           const payment = client.payments?.[currentYear]?.[month] || {};
                           return (
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.isPaid ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
+                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.amount>0 ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
                                 <input
                                   type="number"
-                                  value={payments.enteredAmount|| payment.amount || 0}
-                                  onChange={(e) => setPayments({
-                                    enteredAmount: e.target.value,
+                                  value={payments.enteredAmount[client._id]?.[month] || payment.amount || 0}
+                                  onChange={(e) => setPayments(prev => ({
+                                    ...prev,
+                                    enteredAmount: {
+                                      ...prev.enteredAmount,
+                                      [client._id]: {
+                                        ...(prev.enteredAmount[client._id] || {}),
+                                        [month]: e.target.value
+                                      }
+                                    },
                                     month: month,
                                     year: currentYear
-                                  })}
+                                  }))}
                                   className="w-16 text-center border border-gray-300 rounded text-black"
                                 />
                                 <span className={`text-xs ${payment.isPaid ? 'text-green-600' : 'text-red-600'}`}>
