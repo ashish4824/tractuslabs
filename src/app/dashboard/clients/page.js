@@ -188,7 +188,7 @@ const handlePaymentUpdate = async (clientId) => {
       payments: months.map(month => ({
         year: currentYear,
         month,
-        enteredAmount: month === payments.month ? Number(currentMonthAmount || 0) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
+        enteredAmount: month === payments.month ? Number(currentMonthAmount || Number(client.payments?.[currentYear]?.[month]?.amount || 0)) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
         isPaid: month === payments.month ? Number(currentMonthAmount || 0) > 0 : Boolean(client.payments?.[currentYear]?.[month]?.amount > 0),
         balance: Number(client.fixedAmount || 0) - (month === payments.month ? Number(currentMonthAmount || 0) : Number(client.payments?.[currentYear]?.[month]?.amount || 0)),
         date: month === payments.month ? currentDate : (client.payments?.[currentYear]?.[month]?.date || new Date().toISOString()),
@@ -196,7 +196,6 @@ const handlePaymentUpdate = async (clientId) => {
       
       }))
     };
-
     const response = await fetch(`http://localhost:5001/payments/${clientId}/payments`, {
       method: 'POST',
       headers: {
@@ -501,7 +500,7 @@ const handlePaymentUpdate = async (clientId) => {
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
                               <div className={`flex flex-col  items-center p-1 rounded-md ${payment.amount>0 ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
                                 <div className='flex w-full flex-col'>
-                                  {console.log( client )}
+                                  {/* {console.log( client )} */}
                                 <input
                                   type="number"
                                   value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
