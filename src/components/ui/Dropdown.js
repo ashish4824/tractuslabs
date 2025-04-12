@@ -8,8 +8,6 @@ import DateFormat from "../DateFormate";
 export default function Dropdown({ label, children ,data ,submit,id}) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  console.log(id)
-// console.log("messages response ",submit);
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -25,7 +23,7 @@ export default function Dropdown({ label, children ,data ,submit,id}) {
     <div className="relative  text-left w-[20%]" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between  px-4 py-2 text-sm font-medium text-gray-700 bg-white w-fit border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+        className="flex items-center justify-between z-0  px-4 py-2 text-sm font-medium text-gray-700 bg-white w-fit border border-gray-300 rounded-lg"
       >
         {label}
         <span className="ml-2 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
@@ -36,7 +34,7 @@ export default function Dropdown({ label, children ,data ,submit,id}) {
       {isOpen && (
         <>
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300" 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 z-20" 
             onClick={() => setIsOpen(false)} 
           />
           <div 
@@ -53,7 +51,7 @@ export default function Dropdown({ label, children ,data ,submit,id}) {
             </div>
             <div className="max-h-[60vh] overflow-y-auto p-4 space-y-2 grid grid-cols-1">
             <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
-                <p className="text-gray-800 font-medium text-base leading-relaxed mb-3">{data?.messages?.[0]?.text}</p>
+                <p className="text-gray-800 font-medium text-base leading-relaxed mb-3">{data?.messages?.text}</p>
                 <div className="flex items-center">
                   <span className="text-sm text-gray-600">{DateFormat(data?.date)}</span>
                 </div>
@@ -64,8 +62,8 @@ export default function Dropdown({ label, children ,data ,submit,id}) {
               <Button
                 variant="secondary"
                 size="small"
-                // onClick={()=>submit(id)}
-                onClick={() => (submit,setIsOpen(false))}
+                onClick={()=>submit(id)}
+                // onClick={() => (submit,setIsOpen(false))}
                 className="flex items-center gap-2"
               >
                 Done

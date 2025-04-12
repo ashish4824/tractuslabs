@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect, useRef } from 'react';
 import Button from '@/components/ui/Button';
 import { clientService } from '@/services/clients';
@@ -23,7 +22,7 @@ export default function ClientsPage() {
   });
   const [payments, setPayments] = useState({
     enteredAmount: {},
-    messages: {},
+    messages:'',
     dates: {},
     month: '',
     year: '',
@@ -174,39 +173,28 @@ const handleUpdate = async (clientId) => {
     setError(err.message || 'Failed to update client');
   }
 };
-console.log(payments);
+// console.log(payments);
   
 const handlePaymentUpdate = async (clientId) => {
   try {
     const client = clients.find(c => c._id === clientId);
     if (!client) throw new Error('Client not found');
     
-    // Get the current month's payment amount
     const currentMonthAmount = payments.enteredAmount[clientId]?.[payments.month];
     const currentMessage = payments.messages[clientId]?.[payments.month] || '';
-    const currentDate = payments.dates[clientId]?.[payments.month] || new Date().toISOString().split('T')[0];
+    const currentDate = payments.dates[clientId]?.[payments.month] || new Date().toISOString();
 
     const paymentData = {
-      payments: months.map(month => {
-        const existingPayment = client.payments?.[currentYear]?.[month] || {};
-        const isCurrentMonth = month === payments.month;
-        const amount = isCurrentMonth ? Number(currentMonthAmount) : Number(existingPayment.amount || 0);
-        const isPaid = amount > 0 ? true : false;
-        const fixedAmount = Number(client.fixedAmount || 0);
-        const balance = fixedAmount - amount;
-        const date = isCurrentMonth ? currentDate : existingPayment.date || new Date().toISOString();
-        const message = isCurrentMonth ? currentMessage : (existingPayment.messages || '');
-
-        return {
-          year: currentYear,
-          month,
-          enteredAmount: amount,
-          isPaid,
-          balance,
-          date,
-          message // Changed from messages to message
-        };
-      })
+      payments: months.map(month => ({
+        year: currentYear,
+        month,
+        enteredAmount: month === payments.month ? Number(currentMonthAmount || 0) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
+        isPaid: month === payments.month ? Number(currentMonthAmount || 0) > 0 : Boolean(client.payments?.[currentYear]?.[month]?.amount > 0),
+        balance: Number(client.fixedAmount || 0) - (month === payments.month ? Number(currentMonthAmount || 0) : Number(client.payments?.[currentYear]?.[month]?.amount || 0)),
+        date: month === payments.month ? currentDate : (client.payments?.[currentYear]?.[month]?.date || new Date().toISOString()),
+        messages: month === payments.month ? currentMessage : (client.payments?.[currentYear]?.[month]?.messages?.text || '')
+      
+      }))
     };
 
     const response = await fetch(`http://localhost:5001/payments/${clientId}/payments`, {
@@ -225,7 +213,6 @@ const handlePaymentUpdate = async (clientId) => {
     const updatedClients = await clientService.getAll();
     setClients(updatedClients);
     
-    // Reset only the current client's payment
     setPayments(prev => ({
       ...prev,
       enteredAmount: {
@@ -244,8 +231,6 @@ const handlePaymentUpdate = async (clientId) => {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-
-  // Modify the filteredClients to consider the selected month
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all'); // Add this state
   const filteredClients = clients.filter(client => {
     const nameMatch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -275,18 +260,12 @@ const handlePaymentUpdate = async (clientId) => {
   const indexOfFirstClient = indexOfLastClient - itemsPerPage;
   const currentClients = filteredClients.slice(indexOfFirstClient, indexOfLastClient);
   const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-  
-  // Change page
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
-  
-  // Go to next page
   const nextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
     }
   };
-  
-  // Go to previous page
   const prevPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
@@ -314,10 +293,10 @@ const handlePaymentUpdate = async (clientId) => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-black focus:ring-indigo-500"
             />
-           
+           <div className='relative'>
             <button className='w-full sm:w-auto bg-blue-500 p-2 rounded-md text-white' onClick={()=>setMonthFillter(true)}>Month Filter</button>
             {monthFillter && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className=" absolute w-80 top-10 left-0 right-0 m-auto  z-10">
           <div className="bg-white rounded-lg p-6 w-80 shadow-lg max-h-[90vh] overflow-y-auto mx-4">
             <h2 className="text-lg font-bold mb-4 text-center text-black">Select Months</h2>
 
@@ -364,6 +343,7 @@ const handlePaymentUpdate = async (clientId) => {
       
       
       )}
+      </div>
           </div>
           <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0">
             <input
@@ -405,6 +385,7 @@ const handlePaymentUpdate = async (clientId) => {
             </Button>
           </div>
         </div>
+
       </div>
 
       {error && (
@@ -449,10 +430,9 @@ const handlePaymentUpdate = async (clientId) => {
                           const payment = client.payments?.[currentYear]?.[month] || {};
                           return (
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
+                              
                               <div className={`flex flex-col items-center p-1 rounded-md ${payment.amount > 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-                              <h5 className="text bg-white p-2 w-full border-2 rounded-md text-lg text-black">{payment.amount}</h5>
-                                <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
-                                <input
+                              {/* <input
                                   type="number"
                                   value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
                                   placeholder='Enter Amount...'
@@ -462,14 +442,16 @@ const handlePaymentUpdate = async (clientId) => {
                                       ...prev.enteredAmount,
                                       [client._id]: {
                                         ...(prev.enteredAmount[client._id] || {}),
-                                        [month]: e.target.value
+                                        [month]: e.target.value|| payment.amount ||0
                                       }
                                     },
                                     month: month,
                                     year: currentYear
                                   }))}
                                   className="w-full p-2 text-center border border-gray-300 rounded text-black"
-                                />
+                                /> */}
+                                <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
+                                
                                 <input 
                                   type='text' 
                                   placeholder='enter you messages'
@@ -519,9 +501,8 @@ const handlePaymentUpdate = async (clientId) => {
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
                               <div className={`flex flex-col  items-center p-1 rounded-md ${payment.amount>0 ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
                                 <div className='flex w-full flex-col'>
-                                <h5 className="text bg-white pl-2 border-2 rounded-md text-lg text-black">{payment.amount}</h5>
-                                 <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
-                                 <input
+                                  {console.log( client )}
+                                <input
                                   type="number"
                                   value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
                                   placeholder='enter amount...'
@@ -531,7 +512,7 @@ const handlePaymentUpdate = async (clientId) => {
                                       ...prev.enteredAmount,
                                       [client._id]: {
                                         ...(prev.enteredAmount[client._id] || {}),
-                                        [month]: e.target.value
+                                        [month]: e.target.value || payment.amount ||0
                                       }
                                     },
                                     month: month,
@@ -539,6 +520,8 @@ const handlePaymentUpdate = async (clientId) => {
                                   }))}
                                   className="w-full p-2 text-center border border-gray-300 rounded text-black"
                                 />
+                                 <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
+                                 
                                 <input 
                                   type='text' 
                                   placeholder='enter you messages'
@@ -577,7 +560,7 @@ const handlePaymentUpdate = async (clientId) => {
                                 <span className={`text-xs ${payment.amount>0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {payment.amount>0 ? '✔' : '✘'}
                                 </span>
-                                <span className="text-xs text-white">Bal: {payment.balance || 0}</span>
+                                <span className="text-xs text-white">Bal: {payment.balance-payment.amount || 0}</span>
                               </div>
                             </td>
                           );
