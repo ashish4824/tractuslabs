@@ -431,7 +431,7 @@ const handlePaymentUpdate = async (clientId) => {
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
                               
                               <div className={`flex flex-col items-center p-1 rounded-md ${payment.amount > 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-                              {/* <input
+                              <input
                                   type="number"
                                   value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
                                   placeholder='Enter Amount...'
@@ -448,7 +448,7 @@ const handlePaymentUpdate = async (clientId) => {
                                     year: currentYear
                                   }))}
                                   className="w-full p-2 text-center border border-gray-300 rounded text-black"
-                                /> */}
+                                />
                                 <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
                                 
                                 <input 
@@ -559,7 +559,7 @@ const handlePaymentUpdate = async (clientId) => {
                                 <span className={`text-xs ${payment.amount>0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {payment.amount>0 ? '✔' : '✘'}
                                 </span>
-                                <span className="text-xs text-white">Bal: {payment.balance-payment.amount || 0}</span>
+                                <span className="text-xs text-white">Bal: {payment.balance}</span>
                               </div>
                             </td>
                           );
