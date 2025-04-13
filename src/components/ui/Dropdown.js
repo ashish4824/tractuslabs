@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import Button from "./Button";
-import { X } from "lucide-react";
+import { MessageCircle, X } from "lucide-react";
 import DateFormat from "../DateFormate";
 
 export default function Dropdown({ label, children ,data ,submit,id}) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  // console.log(data.messages)
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -20,12 +21,14 @@ export default function Dropdown({ label, children ,data ,submit,id}) {
   }, []);
 
   return (
-    <div className="relative  text-left w-[20%]" ref={dropdownRef}>
+    <div className="relative  text-left w-[20%] mt-2.5" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between z-0  px-4 py-2 text-sm font-medium text-gray-700 bg-white w-fit border border-gray-300 rounded-lg"
+        className="flex items-center justify-between z-0  px-2 py- text-sm font-medium text-gray-700 bg-white w-fit border border-gray-300 rounded-lg"
       >
-        {label}
+
+        <MessageCircle/>
+        {/* {label} */}
         <span className="ml-2 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
           ▼
         </span>
@@ -53,7 +56,7 @@ export default function Dropdown({ label, children ,data ,submit,id}) {
             <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
                 <p className="text-gray-800 font-medium text-base leading-relaxed mb-3">{data?.messages?.text}</p>
                 <div className="flex items-center">
-                  <span className="text-sm text-gray-600">{DateFormat(data?.date)}</span>
+                  {/* <span className="text-sm text-gray-600">{DateFormat(data?.date)}</span> */}
                 </div>
               </div>
               {children}
@@ -62,7 +65,7 @@ export default function Dropdown({ label, children ,data ,submit,id}) {
               <Button
                 variant="secondary"
                 size="small"
-                onClick={()=>submit(id)}
+                onClick={()=>{submit(id),setIsOpen(false)}}
                 // onClick={() => (submit,setIsOpen(false))}
                 className="flex items-center gap-2"
               >

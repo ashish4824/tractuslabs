@@ -1,0 +1,5 @@
+{
+    "terminal.integrated.allowMnemonics": true,
+    "editor.unusualLineTerminators": "auto",
+    "terminal.integrated.tabs.defaultColor": "terminal.ansiBlack"
+}

@@ -3,15 +3,16 @@ import { useState, useEffect, useRef } from 'react';
 import Button from '@/components/ui/Button';
 import { clientService } from '@/services/clients';
 import { paymentService } from '@/services/payments';
-import { Edit, Trash } from 'lucide-react';
+import { Edit, MoveLeft, MoveRight, Trash } from 'lucide-react';
 import Dropdown from '@/components/ui/Dropdown';
-
+import 'react-tooltip/dist/react-tooltip.css'
+import { Tooltip } from 'react-tooltip'
 export default function ClientsPage() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const[monthFillter,setMonthFillter] = useState(false);
+  const [monthFillter, setMonthFillter] = useState(false);
   const [update, setUpdate] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -22,7 +23,7 @@ export default function ClientsPage() {
   });
   const [payments, setPayments] = useState({
     enteredAmount: {},
-    messages:'',
+    messages: '',
     dates: {},
     month: '',
     year: '',
@@ -33,7 +34,7 @@ export default function ClientsPage() {
   const [uploadLoading, setUploadLoading] = useState(false);
   const fileInputRef = useRef(null);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -97,19 +98,19 @@ export default function ClientsPage() {
         const csvData = event.target.result;
         const lines = csvData.split('\n');
         const headers = lines[0].split(',');
-        
+
         // Parse CSV data
         const clients = [];
         for (let i = 1; i < lines.length; i++) {
           if (lines[i].trim() === '') continue;
-          
+
           const values = lines[i].split(',');
           const client = {};
-          
+
           headers.forEach((header, index) => {
             client[header.trim()] = values[index]?.trim() || '';
           });
-          
+
           clients.push(client);
         }
 
@@ -135,7 +136,7 @@ export default function ClientsPage() {
     try {
       await clientService.deleteClient(clientId);  // Changed from delete to deleteClient
       setClients(clients.filter(client => client._id !== clientId));
-      
+
       // Reset to first page if we're on the last page and it's now empty
       const newFilteredClients = clients.filter(client => client._id !== clientId)
         .filter(client => client.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -148,83 +149,83 @@ export default function ClientsPage() {
     }
   };
 
-const handleEdit = async(client) => {
-  setShowAddModal(true);
-  setUpdate(true);
-  setFormData(client);
-};
-// First, fix the handleUpdate function
-const handleUpdate = async (clientId) => {
-  try {
-    await clientService.updateClient(clientId, formData);
-    setClients(clients.map(client => 
-      client._id === clientId ? { ...client, ...formData } : client
-    ));
-    setShowAddModal(false);
-    setUpdate(false);
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-      fixedAmount: '',
-    });
-  } catch (err) {
-    setError(err.message || 'Failed to update client');
-  }
-};
-// console.log(payments);
-  
-const handlePaymentUpdate = async (clientId) => {
-  try {
-    const client = clients.find(c => c._id === clientId);
-    if (!client) throw new Error('Client not found');
-    
-    const currentMonthAmount = payments.enteredAmount[clientId]?.[payments.month];
-    const currentMessage = payments.messages[clientId]?.[payments.month] || '';
-    const currentDate = payments.dates[clientId]?.[payments.month] || new Date().toISOString();
-
-    const paymentData = {
-      payments: months.map(month => ({
-        year: currentYear,
-        month,
-        enteredAmount: month === payments.month ? Number(currentMonthAmount || Number(client.payments?.[currentYear]?.[month]?.amount || 0)) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
-        isPaid: month === payments.month ? Number(currentMonthAmount || 0) > 0 : Boolean(client.payments?.[currentYear]?.[month]?.amount > 0),
-        balance: Number(client.fixedAmount || 0) - (month === payments.month ? Number(currentMonthAmount || 0) : Number(client.payments?.[currentYear]?.[month]?.amount || 0)),
-        date: month === payments.month ? currentDate : (client.payments?.[currentYear]?.[month]?.date || new Date().toISOString()),
-        messages: month === payments.month ? currentMessage : (client.payments?.[currentYear]?.[month]?.messages?.text || '')
-      
-      }))
-    };
-    const response = await fetch(`http://localhost:5001/payments/${clientId}/payments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(paymentData)
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to update payment');
+  const handleEdit = async (client) => {
+    setShowAddModal(true);
+    setUpdate(true);
+    setFormData(client);
+  };
+  // First, fix the handleUpdate function
+  const handleUpdate = async (clientId) => {
+    try {
+      await clientService.updateClient(clientId, formData);
+      setClients(clients.map(client =>
+        client._id === clientId ? { ...client, ...formData } : client
+      ));
+      setShowAddModal(false);
+      setUpdate(false);
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        fixedAmount: '',
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to update client');
     }
+  };
+  // console.log(payments);
 
-    const updatedClients = await clientService.getAll();
-    setClients(updatedClients);
-    
-    setPayments(prev => ({
-      ...prev,
-      enteredAmount: {
-        ...prev.enteredAmount,
-        [clientId]: {}
-      },
-      month: '',
-      year: currentYear
-    }));
-  } catch (err) {
-    setError(err.message || 'Failed to update payment');
-  }
-};
+  const handlePaymentUpdate = async (clientId) => {
+    try {
+      const client = clients.find(c => c._id === clientId);
+      if (!client) throw new Error('Client not found');
+
+      const currentMonthAmount = payments.enteredAmount[clientId]?.[payments.month];
+      const currentMessage = payments.messages[clientId]?.[payments.month] || '';
+      const currentDate = payments.dates[clientId]?.[payments.month] || new Date().toISOString();
+
+      const paymentData = {
+        payments: months.map(month => ({
+          year: currentYear,
+          month,
+          enteredAmount: month === payments.month ? Number(currentMonthAmount || Number(client.payments?.[currentYear]?.[month]?.amount || 0)) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
+          isPaid: month === payments.month ? Number(currentMonthAmount || 0) > 0 : Boolean(client.payments?.[currentYear]?.[month]?.amount > 0),
+          balance: Number(client.fixedAmount),
+          date: month === payments.month ? currentDate : (client.payments?.[currentYear]?.[month]?.date || new Date().toISOString()),
+          messages: month === payments.month ? currentMessage : (client.payments?.[currentYear]?.[month]?.messages?.text || '')
+
+        }))
+      };
+      const response = await fetch(`https://client-app-blush.vercel.app/payments/${clientId}/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update payment');
+      }
+
+      const updatedClients = await clientService.getAll();
+      setClients(updatedClients);
+
+      setPayments(prev => ({
+        ...prev,
+        enteredAmount: {
+          ...prev.enteredAmount,
+          [clientId]: {}
+        },
+        month: '',
+        year: currentYear
+      }));
+    } catch (err) {
+      setError(err.message || 'Failed to update payment');
+    }
+  };
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -235,23 +236,23 @@ const handlePaymentUpdate = async (clientId) => {
     const nameMatch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
     const phoneMatch = client.phone && client.phone.toString().includes(searchTerm);
     const amountMatch = client.fixedAmount && client.fixedAmount.toString().toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     // Add payment status filtering
     let paymentStatusMatch = true;
     if (paymentStatusFilter !== 'all') {
       const isPaid = paymentStatusFilter === 'paid';
       const hasPaymentForMonth = selectedMonths.length > 0
         ? selectedMonths.some(month => {
-            const payment = client.payments?.[currentYear]?.[month];
-            return isPaid ? (payment?.amount > 0) : (payment?.amount <= 0);
-          })
+          const payment = client.payments?.[currentYear]?.[month];
+          return isPaid ? (payment?.amount > 0) : (payment?.amount <= 0);
+        })
         : months.some(month => {
-            const payment = client.payments?.[currentYear]?.[month];
-            return isPaid ? (payment?.amount > 0) : (payment?.amount <= 0);
-          });
+          const payment = client.payments?.[currentYear]?.[month];
+          return isPaid ? (payment?.amount > 0) : (payment?.amount <= 0);
+        });
       paymentStatusMatch = hasPaymentForMonth;
     }
-    
+
     return (nameMatch || phoneMatch || amountMatch) && paymentStatusMatch;
   });
   // Pagination logic
@@ -282,7 +283,19 @@ const handlePaymentUpdate = async (clientId) => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
-        <button className="text-2xl font-semibold text-gray-900">Clients</button>
+        <div>
+          <button className="text-2xl font-semibold text-gray-900">Clients</button>
+          <div className="flex items-center space-x-2 text-black">
+            <button
+              onClick={() => setCurrentYear(currentYear - 1)}>
+              <MoveLeft />
+            </button>
+            <p>{currentYear}</p>
+            <button onClick={() => setCurrentYear(currentYear + 1)}>
+              <MoveRight />
+            </button>
+          </div>
+        </div>
         <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
             <input
@@ -292,57 +305,57 @@ const handlePaymentUpdate = async (clientId) => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-black focus:ring-indigo-500"
             />
-           <div className='relative'>
-            <button className='w-full sm:w-auto bg-blue-500 p-2 rounded-md text-white' onClick={()=>setMonthFillter(true)}>Month Filter</button>
-            {monthFillter && (
-        <div className=" absolute w-80 top-10 left-0 right-0 m-auto  z-10">
-          <div className="bg-white rounded-lg p-6 w-80 shadow-lg max-h-[90vh] overflow-y-auto mx-4">
-            <h2 className="text-lg font-bold mb-4 text-center text-black">Select Months</h2>
+            <div className='relative'>
+              <button className='w-full sm:w-auto bg-blue-500 p-2 rounded-md text-white' onClick={() => setMonthFillter(true)}>Month Filter</button>
+              {monthFillter && (
+                <div className=" absolute w-80 top-10 left-0 right-0 m-auto  z-10">
+                  <div className="bg-white rounded-lg p-6 w-80 shadow-lg max-h-[90vh] overflow-y-auto mx-4">
+                    <h2 className="text-lg font-bold mb-4 text-center text-black">Select Months</h2>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {months.map((month) => (
-                <div key={month} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    value={month}
-                    id={month}
-                    checked={selectedMonths.includes(month)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedMonths([...selectedMonths, month]);
-                      } else {
-                        setSelectedMonths(selectedMonths.filter(m => m !== month));
-                      }
-                    }}
-                    className="mr-2 size-8 rounded-xl"
-                  />
-                  <label htmlFor={month} className="text-black cursor-pointer">{month}</label>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {months.map((month) => (
+                        <div key={month} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            value={month}
+                            id={month}
+                            checked={selectedMonths.includes(month)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedMonths([...selectedMonths, month]);
+                              } else {
+                                setSelectedMonths(selectedMonths.filter(m => m !== month));
+                              }
+                            }}
+                            className="mr-2 size-8 rounded-xl"
+                          />
+                          <label htmlFor={month} className="text-black cursor-pointer">{month}</label>
+                        </div>
+                      ))}
+                    </div>
+                    <select
+                      value={paymentStatusFilter}
+                      onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                      className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-black focus:ring-indigo-500"
+                    >
+                      <option value="all">All Payments</option>
+                      <option value="paid">Paid</option>
+                      <option value="unpaid">Unpaid</option>
+                    </select>
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        onClick={() => setMonthFillter(false)}
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full sm:w-auto"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              ))}
+
+
+              )}
             </div>
-            <select
-              value={paymentStatusFilter}
-              onChange={(e) => setPaymentStatusFilter(e.target.value)}
-              className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-black focus:ring-indigo-500"
-            >
-              <option value="all">All Payments</option>
-              <option value="paid">Paid</option>
-              <option value="unpaid">Unpaid</option>
-            </select>
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setMonthFillter(false)}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full sm:w-auto"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      
-      
-      )}
-      </div>
           </div>
           <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0">
             <input
@@ -359,8 +372,8 @@ const handlePaymentUpdate = async (clientId) => {
             >
               {csvFile ? csvFile.name : 'Choose CSV'}
             </label>
-            <Button 
-              onClick={handleCsvUpload} 
+            <Button
+              onClick={handleCsvUpload}
               variant="secondary"
               isLoading={uploadLoading}
               disabled={!csvFile || uploadLoading}
@@ -368,23 +381,24 @@ const handlePaymentUpdate = async (clientId) => {
             >
               Upload CSV
             </Button>
-            <Button 
-              onClick={() => {setShowAddModal(true),setFormData(
-                {
-                  name: '',
-                  email: '',
-                  phone: '',
-                  address: '',
-                  fixedAmount: '',
-                }
-              )}} 
+            <Button
+              onClick={() => {
+                setShowAddModal(true), setFormData(
+                  {
+                    name: '',
+                    email: '',
+                    phone: '',
+                    address: '',
+                    fixedAmount: '',
+                  }
+                )
+              }}
               className="w-full sm:w-auto"
             >
               Add Client
             </Button>
           </div>
         </div>
-
       </div>
 
       {error && (
@@ -405,23 +419,33 @@ const handlePaymentUpdate = async (clientId) => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fixed Amount</th>
                     {selectedMonths.length > 0 ? (
                       selectedMonths.map(month => (
-                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month.slice(0,3)}</th>
+                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month.slice(0, 3)}</th>
                       ))
                     ) : (
                       months.map(month => (
-                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month.slice(0,3)}</th>
+                        <th key={month} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{month.slice(0, 3)}</th>
                       ))
                     )}
-                    
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edit</th>
+
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edit</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"> Save</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" >Action </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" >Action </th> */}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {currentClients.map(client => (
                     <tr key={client._id}>
-                      <td className="px-2 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{client.name}</td>
+                      <td className="px-2 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dropdown">
+                      <button className='dropdown-button'>
+                        {client.name}
+                        </button>
+
+                        <div className='space-x-2.5 top-10 left-0 right-0 m-auto dropdown-content w-fit'>
+                        <button className='bg-red-500 text-white p-2 rounded-md  cursor-pointer' onClick={()=>handleDelete(client._id)}><Trash/></button>
+                        <button className='bg-blue-500 text-white p-2 rounded-md cursor-pointer' onClick={()=>handleEdit(client)}><Edit/></button>
+                        </div>
+                        
+                        </td>
                       <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">{client.phone}</td>
                       <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">₹{Number(client.fixedAmount || 0).toFixed(2)}</td>
                       {selectedMonths.length > 0 ? (
@@ -429,9 +453,9 @@ const handlePaymentUpdate = async (clientId) => {
                           const payment = client.payments?.[currentYear]?.[month] || {};
                           return (
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
-                              
-                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.amount > 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-                              <input
+
+                              <div className={`flex flex-col items-center p-1 rounded-md ${payment.isPaid ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                                <input
                                   type="number"
                                   value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
                                   placeholder='Enter Amount...'
@@ -441,7 +465,7 @@ const handlePaymentUpdate = async (clientId) => {
                                       ...prev.enteredAmount,
                                       [client._id]: {
                                         ...(prev.enteredAmount[client._id] || {}),
-                                        [month]: e.target.value|| payment.amount ||0
+                                        [month]: e.target.value || payment.amount || 0
                                       }
                                     },
                                     month: month,
@@ -450,44 +474,42 @@ const handlePaymentUpdate = async (clientId) => {
                                   className="w-full p-2 text-center border border-gray-300 rounded text-black"
                                 />
                                 <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
-                                
-                                <input 
-                                  type='text' 
-                                  placeholder='enter you messages'
-                                  className='w-full px-2 py-2 border border-gray-300 rounded text-black'
-                                  value={payments.messages[client._id]?.[month] || payment.messages || ''}
-                                  onChange={(e) => setPayments(prev => ({
-                                    ...prev,
-                                    messages: {
-                                      ...prev.messages,
-                                      [client._id]: {
-                                        ...(prev.messages[client._id] || ""),
-                                        [month]: e.target.value
-                                      }
-                                    },
-                                    month: month
-                                  }))}
-                                />
-                                <input 
-                                  type='date'
-                                  value={payments.dates[client._id]?.[month] || payment.date?.split('T')[0] || new Date().toISOString().split('T')[0]}
-                                  onChange={(e) => setPayments(prev => ({
-                                    ...prev,
-                                    dates: {
-                                      ...prev.dates,
-                                      [client._id]: {
-                                        ...(prev.dates[client._id] || {}),
-                                        [month]: e.target.value
-                                      }
-                                    },
-                                    month: month
-                                  }))}
-                                  className="w-full px-2 py-2 border border-gray-300 rounded text-black"
-                                />
+
+                                  <input
+                                    type='text'
+                                    placeholder='enter you messages'
+                                    className='w-full px-2 py-2 border border-gray-300 rounded text-black'
+                                    value={payments.messages[client._id]?.[month] || payment.messages || ''}
+                                    onChange={(e) => setPayments(prev => ({
+                                      ...prev,
+                                      messages: {
+                                        ...prev.messages,
+                                        [client._id]: {
+                                          ...(prev.messages[client._id] || ""),
+                                          [month]: e.target.value
+                                        }
+                                      },
+                                      month: month
+                                    }))}
+                                  />
+                                  <input
+                                    type='date'
+                                    value={payments.dates[client._id]?.[month] || payment.date?.split('T')[0] || new Date().toISOString().split('T')[0]}
+                                    onChange={(e) => setPayments(prev => ({
+                                      ...prev,
+                                      dates: {
+                                        ...prev.dates,
+                                        [client._id]: {
+                                          ...(prev.dates[client._id] || {}),
+                                          [month]: e.target.value
+                                        }
+                                      },
+                                      month: month
+                                    }))}
+                                    className="w-full px-2 py-2 border border-gray-300 rounded text-black"
+                                  />
                                 </Dropdown>
-                                <span className={`text-xs ${payment.isPaid ? 'text-red-500' : 'text-green-600'}`}>
-                                  {payment.isPaid ? '✔' : '✘'}
-                                </span>
+                                <button className='bg-red-500 text-white p-2 rounded-md' onClick={() => handlePaymentUpdate(client._id)}>save</button>
                                 <span className="text-xs text-white">Bal: {payment.balance || 0}</span>
                               </div>
                             </td>
@@ -498,76 +520,81 @@ const handlePaymentUpdate = async (clientId) => {
                           const payment = client.payments?.[currentYear]?.[month] || {};
                           return (
                             <td key={month} className="px-2 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className={`flex flex-col  items-center p-1 rounded-md ${payment.amount>0 ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
-                                <div className='flex w-full flex-col'>
-                                  {/* {console.log( client )} */}
-                                <input
-                                  type="number"
-                                  value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
-                                  placeholder='enter amount...'
-                                  onChange={(e) => setPayments(prev => ({
-                                    ...prev,
-                                    enteredAmount: {
-                                      ...prev.enteredAmount,
-                                      [client._id]: {
-                                        ...(prev.enteredAmount[client._id] || {}),
-                                        [month]: e.target.value || payment.amount ||0
-                                      }
-                                    },
-                                    month: month,
-                                    year: currentYear
-                                  }))}
-                                  className="w-full p-2 text-center border border-gray-300 rounded text-black"
-                                />
-                                 <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
-                                 
-                                <input 
-                                  type='text' 
-                                  placeholder='enter you messages'
-                                  value={payments.messages[client._id]?.[month] || payment.messages?.[0]?.text || ''}
-                                  onChange={(e) => setPayments(prev => ({
-                                    ...prev,
-                                    messages: {
-                                      ...prev.messages,
-                                      [client._id]: {
-                                        ...(prev.messages[client._id] || ''),
-                                        [month]: e.target.value
-                                      }
-                                    },
-                                    month: month
-                                  }))}
-                                  className="w-full px-2 py-2 border border-gray-300 rounded text-black"
-                                />
-                                <input 
-                                  type='date'
-                                  value={payments.dates[client._id]?.[month] || payment.date?.split('T')[0] || new Date().toISOString().split('T')[0]}
-                                  onChange={(e) => setPayments(prev => ({
-                                    ...prev,
-                                    dates: {
-                                      ...prev.dates,
-                                      [client._id]: {
-                                        ...(prev.dates[client._id] || {}),
-                                        [month]: e.target.value
-                                      }
-                                    },
-                                    month: month
-                                  }))}
-                                  className="w-full px-2 py-2 border border-gray-300 rounded text-black"
-                                />
-                                </Dropdown>
+                              <Tooltip id={client._id} />
+                              <a
+                                data-tooltip-id={client._id}
+                                data-tooltip-content={payment.messages?.text||''}
+                                data-tooltip-place="top"
+                              >
+                                <div className={`flex flex-col  items-center p-1 rounded-md ${payment.isPaid ? 'bg-green-600 text-white ' : 'bg-red-600 text-white'}`}>
+                                  <div className='flex w-full flex-col'>
+                                    {/* {console.log( client )} */}
+                                    <input
+                                      type="number"
+                                      value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
+                                      placeholder='enter amount...'
+                                      onChange={(e) => setPayments(prev => ({
+                                        ...prev,
+                                        enteredAmount: {
+                                          ...prev.enteredAmount,
+                                          [client._id]: {
+                                            ...(prev.enteredAmount[client._id] || {}),
+                                            [month]: e.target.value || payment.amount || 0
+                                          }
+                                        },
+                                        month: month,
+                                        year: currentYear
+                                      }))}
+                                      className="w-full p-2 text-center border border-gray-300 rounded text-black"
+                                    />
+                                    <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
+
+                                      <input
+                                        type='text'
+                                        placeholder='enter you messages'
+                                        value={payments.messages[client._id]?.[month] || payment.messages?.[0]?.text || ''}
+                                        onChange={(e) => setPayments(prev => ({
+                                          ...prev,
+                                          messages: {
+                                            ...prev.messages,
+                                            [client._id]: {
+                                              ...(prev.messages[client._id] || ''),
+                                              [month]: e.target.value
+                                            }
+                                          },
+                                          month: month
+                                        }))}
+                                        className="w-full px-2 py-2 border border-gray-300 rounded text-black"
+                                      />
+                                      <input
+                                        type='date'
+                                        value={payments.dates[client._id]?.[month] || payment.date?.split('T')[0] || new Date().toISOString().split('T')[0]}
+                                        onChange={(e) => setPayments(prev => ({
+                                          ...prev,
+                                          dates: {
+                                            ...prev.dates,
+                                            [client._id]: {
+                                              ...(prev.dates[client._id] || {}),
+                                              [month]: e.target.value
+                                            }
+                                          },
+                                          month: month
+                                        }))}
+                                        className="w-full px-2 py-2 border border-gray-300 rounded text-black"
+                                      />
+                                    </Dropdown>
+                                  </div>
+                                  <button className='bg-blue-500 text-white p-1 mt-2 rounded-md w-full' onClick={() => handlePaymentUpdate(client._id)}>save</button>
+                                  <span className="text-xs text-white mt-2.5">Bal: {payment.balance}</span>
                                 </div>
-                                <span className={`text-xs ${payment.amount>0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  {payment.amount>0 ? '✔' : '✘'}
-                                </span>
-                                <span className="text-xs text-white">Bal: {payment.balance}</span>
-                              </div>
+                              </a>
                             </td>
                           );
                         })
                       )}
-                      <td><button className='bg-blue-500 text-white p-2 rounded-md' onClick={()=>handleEdit(client)}><Edit/></button> </td>
-                      <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handlePaymentUpdate(client._id)}>save</button> </td>
-                      <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handleDelete(client._id)}><Trash/></button> </td>
+                      {/* <td><button className='bg-blue-500 text-white p-2 rounded-md' onClick={()=>handleEdit(client)}><Edit/></button> </td> */}
+                      {/* <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handlePaymentUpdate(client._id)}>save</button> </td> */}
+                      {/* <td><button className='bg-red-500 text-white p-2 rounded-md' onClick={()=>handleDelete(client._id)}><Trash/></button> </td> */}
                     </tr>
                   ))}
                 </tbody>
@@ -582,8 +609,8 @@ const handlePaymentUpdate = async (clientId) => {
         <div className="flex flex-col space-y-4 px-4 sm:px-0">
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-2">
             <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
-              <Button 
-                onClick={prevPage} 
+              <Button
+                onClick={prevPage}
                 disabled={currentPage === 1}
                 variant="secondary"
                 size="small"
@@ -591,7 +618,7 @@ const handlePaymentUpdate = async (clientId) => {
               >
                 Previous
               </Button>
-              
+
               <div className="flex flex-wrap justify-center gap-1 max-w-[280px] sm:max-w-none overflow-x-auto px-1">
                 {totalPages <= 5 ? (
                   Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
@@ -611,9 +638,9 @@ const handlePaymentUpdate = async (clientId) => {
                     >
                       1
                     </button>
-                    
+
                     {currentPage > 3 && <span className="px-1 text-gray-500">...</span>}
-                    
+
                     {Array.from(
                       { length: Math.min(3, totalPages - 2) },
                       (_, i) => {
@@ -625,7 +652,7 @@ const handlePaymentUpdate = async (clientId) => {
                         } else {
                           pageNum = currentPage - 1 + i;
                         }
-                        
+
                         return pageNum > 1 && pageNum < totalPages ? (
                           <button
                             key={pageNum}
@@ -637,9 +664,9 @@ const handlePaymentUpdate = async (clientId) => {
                         ) : null;
                       }
                     ).filter(Boolean)}
-                    
+
                     {currentPage < totalPages - 2 && <span className="px-1 text-gray-500">...</span>}
-                    
+
                     <button
                       onClick={() => paginate(totalPages)}
                       className={`min-w-[32px] h-8 text-sm rounded ${currentPage === totalPages ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
@@ -649,9 +676,9 @@ const handlePaymentUpdate = async (clientId) => {
                   </>
                 )}
               </div>
-              
-              <Button 
-                onClick={nextPage} 
+
+              <Button
+                onClick={nextPage}
                 disabled={currentPage === totalPages}
                 variant="secondary"
                 size="small"
@@ -661,12 +688,12 @@ const handlePaymentUpdate = async (clientId) => {
               </Button>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4 text-center sm:text-left">
             <div className="text-sm text-gray-500 whitespace-nowrap">
               Page {currentPage} of {totalPages || 1} | Showing {indexOfFirstClient + 1}-{Math.min(indexOfLastClient, filteredClients.length)} of {filteredClients.length} clients
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <label htmlFor="itemsPerPage" className="text-sm text-gray-700 whitespace-nowrap">Items per page:</label>
               <select
@@ -703,7 +730,7 @@ const handlePaymentUpdate = async (clientId) => {
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-black"
                   placeholder="Client name"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
               <div>
@@ -715,7 +742,7 @@ const handlePaymentUpdate = async (clientId) => {
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-black"
                   placeholder="Email address"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
               <div>
@@ -728,7 +755,7 @@ const handlePaymentUpdate = async (clientId) => {
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-black"
                   placeholder="Phone number"
                   value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
               <div>
@@ -740,7 +767,7 @@ const handlePaymentUpdate = async (clientId) => {
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-black"
                   placeholder="Address"
                   value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
               </div>
               <div>
@@ -753,7 +780,7 @@ const handlePaymentUpdate = async (clientId) => {
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-black"
                   placeholder="0.00"
                   value={formData.fixedAmount}
-                  onChange={(e) => setFormData({...formData, fixedAmount: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, fixedAmount: e.target.value })}
                 />
               </div>
               <div className="flex justify-end space-x-3">
@@ -769,4 +796,5 @@ const handlePaymentUpdate = async (clientId) => {
         </div>
       )}
     </div>
-  )}
+  )
+}
