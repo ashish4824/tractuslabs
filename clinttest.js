@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Button from '@/components/ui/Button';
 import { clientService } from '@/services/clients';
 import { paymentService } from '@/services/payments';
@@ -23,11 +23,13 @@ export default function ClientsPage() {
   });
   const [payments, setPayments] = useState({
     enteredAmount: {},
-    messages: '',
+    messages: {},
     dates: {},
     month: '',
     year: '',
   })
+  // Add a ref to store timers for debouncing
+  const paymentTimers = useRef({})
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonths, setSelectedMonths] = useState([]);
   const [csvFile, setCsvFile] = useState(null);
@@ -174,138 +176,63 @@ export default function ClientsPage() {
       setError(err.message || 'Failed to update client');
     }
   };
-
+  // console.log(payments);
 
   const handlePaymentUpdate = async (clientId) => {
-  //   try {
-  //     const client = clients.find(c => c._id === clientId);
-  //     if (!client) throw new Error('Client not found');
+    try {
+      const client = clients.find(c => c._id === clientId);
+      if (!client) throw new Error('Client not found');
 
-  //     const currentMonthAmount = payments.enteredAmount[clientId]?.[payments.month];
-  //     const currentMessage = payments.messages[clientId]?.[payments.month] || '';
-  //     const currentDate = payments.dates[clientId]?.[payments.month] || new Date().toISOString();
+      const currentMonthAmount = payments.enteredAmount[clientId]?.[payments.month];
+      const currentMessage = payments.messages[clientId]?.[payments.month] || '';
+      const currentDate = payments.dates[clientId]?.[payments.month] || new Date().toISOString();
 
-  //     const paymentData = {
-  //       payments: months.map(month => ({
-  //         year: currentYear,
-  //         month,
-  //         enteredAmount: month === payments.month ? Number(currentMonthAmount || Number(client.payments?.[currentYear]?.[month]?.amount || 0)) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
-  //         isPaid: month === payments.month ? Number(currentMonthAmount || 0) > 0 : Boolean(client.payments?.[currentYear]?.[month]?.amount > 0),
-  //         balance: Number(client.fixedAmount),
-  //         date: month === payments.month ? currentDate : (client.payments?.[currentYear]?.[month]?.date || new Date().toISOString()),
-  //         messages: month === payments.month ? currentMessage : (client.payments?.[currentYear]?.[month]?.messages?.text || '')
+      const paymentData = {
+        payments: months.map(month => ({
+          year: currentYear,
+          month,
+          enteredAmount: month === payments.month ? Number(currentMonthAmount || Number(client.payments?.[currentYear]?.[month]?.amount || 0)) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
+          isPaid: month === payments.month ? Number(currentMonthAmount || 0) > 0 : Boolean(client.payments?.[currentYear]?.[month]?.amount > 0),
+          balance: Number(client.fixedAmount),
+          date: month === payments.month ? currentDate : (client.payments?.[currentYear]?.[month]?.date || new Date().toISOString()),
+          messages: month === payments.month ? currentMessage : (client.payments?.[currentYear]?.[month]?.messages?.text || '')
 
-  //       }))
-  //     };
-  //     const response = await fetch(`https://client-app-blush.vercel.app/payments/${clientId}/payments`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'Authorization': `Bearer ${localStorage.getItem('token')}`
-  //       },
-  //       body: JSON.stringify(paymentData)
-  //     });
+        }))
+      };
+      const response = await fetch(`https://client-app-blush.vercel.app/payments/${clientId}/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(paymentData)
+      });
 
-  //     if (!response.ok) {
-  //       throw new Error('Failed to update payment');
-  //     }
+      if (!response.ok) {
+        throw new Error('Failed to update payment');
+      }
 
-  //     const updatedClients = await clientService.getAll();
-  //     setClients(updatedClients);
+      const updatedClients = await clientService.getAll();
+      setClients(updatedClients);
 
-  //     setPayments(prev => ({
-  //       ...prev,
-  //       enteredAmount: {
-  //         ...prev.enteredAmount,
-  //         [clientId]: {}
-  //       },
-  //       month: '',
-  //       year: currentYear
-  //     }));
-  //   } catch (err) {
-  //     setError(err.message || 'Failed to update payment');
-  //   }
+      setPayments(prev => ({
+        ...prev,
+        enteredAmount: {
+          ...prev.enteredAmount,
+          [clientId]: {}
+        },
+        month: '',
+        year: currentYear
+      }));
+    } catch (err) {
+      setError(err.message || 'Failed to update payment');
+    }
   };
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  const clientId = Object.keys(payments.enteredAmount)[0];
-  const client = clients.find(c => c._id === clientId);
-
-  const updatePaymentTimeoutRef = useRef(null);
-console.log(payments)
-  useEffect(() => {
-    const updatePayment = async () => {
-      const clientId = Object.keys(payments.enteredAmount)[0];
-      if (!clientId || !payments.month) return;
-
-      try {
-        const client = clients.find(c => c._id === clientId);
-        if (!client) return;
-
-        const currentMonthAmount = payments.enteredAmount[clientId]?.[payments.month];
-        const currentMessage = payments.messages[clientId]?.[payments.month] || '';
-        const currentDate = payments.dates[clientId]?.[payments.month] || new Date().toISOString();
-
-        const paymentData = {
-          payments: months.map(month => ({
-            year: currentYear,
-            month,
-            enteredAmount: month === payments.month ? Number(currentMonthAmount || Number(client.payments?.[currentYear]?.[month]?.amount || 0)) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
-            isPaid: month === payments.month ? Number(currentMonthAmount || 0) > 0 : Boolean(client.payments?.[currentYear]?.[month]?.amount > 0),
-            balance: Number(client.fixedAmount),
-            date: month === payments.month ? currentDate : (client.payments?.[currentYear]?.[month]?.date || new Date().toISOString()),
-            messages: month === payments.month ? currentMessage : (client.payments?.[currentYear]?.[month]?.messages?.text || '')
-          }))
-        };
-
-        const response = await fetch(`https://client-app-blush.vercel.app/payments/${clientId}/payments`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify(paymentData)
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to update payment');
-        }
-
-        const updatedClients = await clientService.getAll();
-        setClients(updatedClients);
-
-        setPayments(prev => ({
-          ...prev,
-          enteredAmount: {
-            ...prev.enteredAmount,
-            [clientId]: {}
-          },
-          month: '',
-          year: currentYear
-        }));
-      } catch (err) {
-        setError(err.message || 'Failed to update payment');
-      }
-    };
-
-    // Clear any existing timeout
-    if (updatePaymentTimeoutRef.current) {
-      clearTimeout(updatePaymentTimeoutRef.current);
-    }
-
-    // Set new timeout
-    updatePaymentTimeoutRef.current = setTimeout(updatePayment, 3000);
-
-    // Cleanup function
-    return () => {
-      if (updatePaymentTimeoutRef.current) {
-        clearTimeout(updatePaymentTimeoutRef.current);
-      }
-    };
-  }, [payments, clients, currentYear, months]);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all'); // Add this state
   const filteredClients = clients.filter(client => {
     const nameMatch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -531,23 +458,28 @@ console.log(payments)
 
                               <div className={`flex flex-col items-center p-1 rounded-md ${payment.isPaid ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
                                 <input
-                                  type="text"
+                                  type="number"
                                   value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
                                   placeholder='Enter Amount...'
-                                  // placeholder={payments.enteredAmount[client._id]?.[month] || payment.amount || 'enter amout here '}
-
-                                  onChange={(e) => setPayments(prev => ({
-                                    ...prev,
-                                    enteredAmount: {
-                                      ...prev.enteredAmount,
-                                      [client._id]: {
-                                        ...(prev.enteredAmount[client._id] || {}),
-                                        [month]: e.target.value || payment.amount || 0
-                                      }
-                                    },
-                                    month: month,
-                                    year: currentYear
-                                  }))}
+                                  onChange={(e) => {
+                                    setPayments(prev => ({
+                                      ...prev,
+                                      enteredAmount: {
+                                        ...prev.enteredAmount,
+                                        [client._id]: {
+                                          ...(prev.enteredAmount[client._id] || {}),
+                                          [month]: e.target.value || payment.amount || 0
+                                        }
+                                      },
+                                      month: month,
+                                      year: currentYear
+                                    }));
+                                    // Add a small delay before saving to prevent too many API calls
+                                    const timer = setTimeout(() => {
+                                      handlePaymentUpdate(client._id);
+                                    }, 2000);
+                                    return () => clearTimeout(timer);
+                                  }}
                                   className="w-full p-2 text-center border border-gray-300 rounded text-black"
                                 />
                                 <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
@@ -557,36 +489,62 @@ console.log(payments)
                                     placeholder='enter you messages'
                                     className='w-full px-2 py-2 border border-gray-300 rounded text-black'
                                     value={payments.messages[client._id]?.[month] || payment.messages || ''}
-                                    onChange={(e) => setPayments(prev => ({
-                                      ...prev,
-                                      messages: {
-                                        ...prev.messages,
-                                        [client._id]: {
-                                          ...(prev.messages[client._id] || ""),
-                                          [month]: e.target.value
-                                        }
-                                      },
-                                      month: month
-                                    }))}
+                                    onChange={(e) => {
+                                      setPayments(prev => ({
+                                        ...prev,
+                                        messages: {
+                                          ...prev.messages,
+                                          [client._id]: {
+                                            ...(prev.messages[client._id] || ""),
+                                            [month]: e.target.value
+                                          }
+                                        },
+                                        month: month
+                                      }));
+                                      
+                                      // Clear any existing timer for this client and month
+                                      const timerKey = `${client._id}-${month}-msg`;
+                                      if (paymentTimers.current[timerKey]) {
+                                        clearTimeout(paymentTimers.current[timerKey]);
+                                      }
+                                      
+                                      // Set a new timer and store it in the ref
+                                      paymentTimers.current[timerKey] = setTimeout(() => {
+                                        handlePaymentUpdate(client._id);
+                                      }, 1000);
+                                    }}
                                   />
                                   <input
                                     type='date'
                                     value={payments.dates[client._id]?.[month] || payment.date?.split('T')[0] || new Date().toISOString().split('T')[0]}
-                                    onChange={(e) => setPayments(prev => ({
-                                      ...prev,
-                                      dates: {
-                                        ...prev.dates,
-                                        [client._id]: {
-                                          ...(prev.dates[client._id] || {}),
-                                          [month]: e.target.value
-                                        }
-                                      },
-                                      month: month
-                                    }))}
+                                    onChange={(e) => {
+                                      setPayments(prev => ({
+                                        ...prev,
+                                        dates: {
+                                          ...prev.dates,
+                                          [client._id]: {
+                                            ...(prev.dates[client._id] || {}),
+                                            [month]: e.target.value
+                                          }
+                                        },
+                                        month: month
+                                      }));
+                                      
+                                      // Clear any existing timer for this client and month
+                                      const timerKey = `${client._id}-${month}-date`;
+                                      if (paymentTimers.current[timerKey]) {
+                                        clearTimeout(paymentTimers.current[timerKey]);
+                                      }
+                                      
+                                      // Set a new timer and store it in the ref
+                                      paymentTimers.current[timerKey] = setTimeout(() => {
+                                        handlePaymentUpdate(client._id);
+                                      }, 1000);
+                                    }}
                                     className="w-full px-2 py-2 border border-gray-300 rounded text-black"
                                   />
                                 </Dropdown>
-                                {/* <button className='bg-red-500 text-white p-2 rounded-md' onClick={() => handlePaymentUpdate(client._id)}>save</button> */}
+                                {/* Save button removed - saving happens automatically on change */}
                                 <span className="text-xs text-white">Bal: {payment.balance || 0}</span>
                               </div>
                             </td>
@@ -607,21 +565,34 @@ console.log(payments)
                                   <div className='flex w-full flex-col'>
                                     {/* {console.log( client )} */}
                                     <input
-                                      type="text"
+                                      type="number"
                                       value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
-                                      placeholder={'enter amout here '}
-                                      onChange={(e) => setPayments(prev => ({
-                                        ...prev,
-                                        enteredAmount: {
-                                          ...prev.enteredAmount,
-                                          [client._id]: {
-                                            ...(prev.enteredAmount[client._id] || {}),
-                                            [month]: e.target.value || payment.amount || 0
-                                          }
-                                        },
-                                        month: month,
-                                        year: currentYear
-                                      }))}
+                                      placeholder='enter amount...'
+                                      onChange={(e) => {
+                                        setPayments(prev => ({
+                                          ...prev,
+                                          enteredAmount: {
+                                            ...prev.enteredAmount,
+                                            [client._id]: {
+                                              ...(prev.enteredAmount[client._id] || {}),
+                                              [month]: e.target.value || payment.amount || 0
+                                            }
+                                          },
+                                          month: month,
+                                          year: currentYear
+                                        }));
+                                        
+                                        // Clear any existing timer for this client and month
+                                        const timerKey = `${client._id}-${month}`;
+                                        if (paymentTimers.current[timerKey]) {
+                                          clearTimeout(paymentTimers.current[timerKey]);
+                                        }
+                                        
+                                        // Set a new timer and store it in the ref
+                                        paymentTimers.current[timerKey] = setTimeout(() => {
+                                          handlePaymentUpdate(client._id);
+                                        }, 1000);
+                                      }}
                                       className="w-full p-2 text-center border border-gray-300 rounded text-black"
                                     />
                                     <Dropdown label={"Open"} data={payment} id={client._id} submit={handlePaymentUpdate} >
@@ -630,38 +601,64 @@ console.log(payments)
                                         type='text'
                                         placeholder='enter you messages'
                                         value={payments.messages[client._id]?.[month] || payment.messages?.[0]?.text || ''}
-                                        onChange={(e) => setPayments(prev => ({
-                                          ...prev,
-                                          messages: {
-                                            ...prev.messages,
-                                            [client._id]: {
-                                              ...(prev.messages[client._id] || ''),
-                                              [month]: e.target.value
-                                            }
-                                          },
-                                          month: month
-                                        }))}
+                                        onChange={(e) => {
+                                          setPayments(prev => ({
+                                            ...prev,
+                                            messages: {
+                                              ...prev.messages,
+                                              [client._id]: {
+                                                ...(prev.messages[client._id] || ''),
+                                                [month]: e.target.value
+                                              }
+                                            },
+                                            month: month
+                                          }));
+                                          
+                                          // Clear any existing timer for this client and month
+                                          const timerKey = `${client._id}-${month}-msg`;
+                                          if (paymentTimers.current[timerKey]) {
+                                            clearTimeout(paymentTimers.current[timerKey]);
+                                          }
+                                          
+                                          // Set a new timer and store it in the ref
+                                          paymentTimers.current[timerKey] = setTimeout(() => {
+                                            handlePaymentUpdate(client._id);
+                                          }, 1000);
+                                        }}
                                         className="w-full px-2 py-2 border border-gray-300 rounded text-black"
                                       />
                                       <input
                                         type='date'
                                         value={payments.dates[client._id]?.[month] || payment.date?.split('T')[0] || new Date().toISOString().split('T')[0]}
-                                        onChange={(e) => setPayments(prev => ({
-                                          ...prev,
-                                          dates: {
-                                            ...prev.dates,
-                                            [client._id]: {
-                                              ...(prev.dates[client._id] || {}),
-                                              [month]: e.target.value
-                                            }
-                                          },
-                                          month: month
-                                        }))}
+                                        onChange={(e) => {
+                                          setPayments(prev => ({
+                                            ...prev,
+                                            dates: {
+                                              ...prev.dates,
+                                              [client._id]: {
+                                                ...(prev.dates[client._id] || {}),
+                                                [month]: e.target.value
+                                              }
+                                            },
+                                            month: month
+                                          }));
+                                          
+                                          // Clear any existing timer for this client and month
+                                          const timerKey = `${client._id}-${month}-date`;
+                                          if (paymentTimers.current[timerKey]) {
+                                            clearTimeout(paymentTimers.current[timerKey]);
+                                          }
+                                          
+                                          // Set a new timer and store it in the ref
+                                          paymentTimers.current[timerKey] = setTimeout(() => {
+                                            handlePaymentUpdate(client._id);
+                                          }, 1000);
+                                        }}
                                         className="w-full px-2 py-2 border border-gray-300 rounded text-black"
                                       />
                                     </Dropdown>
                                   </div>
-                                  {/* <button className='bg-blue-500 text-white p-1 mt-2 rounded-md w-full' onClick={() => handlePaymentUpdate(client._id)}>save</button> */}
+                                  {/* Save button removed - saving happens automatically on change */}
                                   <span className="text-xs text-white mt-2.5">Bal: {payment.balance}</span>
                                 </div>
                               </a>
