@@ -177,54 +177,54 @@ export default function ClientsPage() {
 
 
   const handlePaymentUpdate = async (clientId) => {
-  //   try {
-  //     const client = clients.find(c => c._id === clientId);
-  //     if (!client) throw new Error('Client not found');
+    // try {
+    //   const client = clients.find(c => c._id === clientId);
+    //   // if (!client) throw new Error('Client not found');
 
-  //     const currentMonthAmount = payments.enteredAmount[clientId]?.[payments.month];
-  //     const currentMessage = payments.messages[clientId]?.[payments.month] || '';
-  //     const currentDate = payments.dates[clientId]?.[payments.month] || new Date().toISOString();
+    //   const currentMonthAmount = payments.enteredAmount[clientId]?.[payments.month];
+    //   const currentMessage = payments.messages[clientId]?.[payments.month] || '';
+    //   const currentDate = payments.dates[clientId]?.[payments.month] || new Date().toISOString();
 
-  //     const paymentData = {
-  //       payments: months.map(month => ({
-  //         year: currentYear,
-  //         month,
-  //         enteredAmount: month === payments.month ? Number(currentMonthAmount || Number(client.payments?.[currentYear]?.[month]?.amount || 0)) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
-  //         isPaid: month === payments.month ? Number(currentMonthAmount || 0) > 0 : Boolean(client.payments?.[currentYear]?.[month]?.amount > 0),
-  //         balance: Number(client.fixedAmount),
-  //         date: month === payments.month ? currentDate : (client.payments?.[currentYear]?.[month]?.date || new Date().toISOString()),
-  //         messages: month === payments.month ? currentMessage : (client.payments?.[currentYear]?.[month]?.messages?.text || '')
+    //   const paymentData = {
+    //     payments: months.map(month => ({
+    //       year: currentYear,
+    //       month,
+    //       enteredAmount: month === payments.month ? Number(currentMonthAmount || Number(client.payments?.[currentYear]?.[month]?.amount || 0)) : Number(client.payments?.[currentYear]?.[month]?.amount || 0),
+    //       isPaid: month === payments.month ? Number(currentMonthAmount || 0) > 0 : Boolean(client.payments?.[currentYear]?.[month]?.amount > 0),
+    //       balance: Number(client.fixedAmount),
+    //       date: month === payments.month ? currentDate : (client.payments?.[currentYear]?.[month]?.date || new Date().toISOString()),
+    //       messages: month === payments.month ? currentMessage : (client.payments?.[currentYear]?.[month]?.messages?.text || '')
 
-  //       }))
-  //     };
-  //     const response = await fetch(`https://client-app-blush.vercel.app/payments/${clientId}/payments`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'Authorization': `Bearer ${localStorage.getItem('token')}`
-  //       },
-  //       body: JSON.stringify(paymentData)
-  //     });
+    //     }))
+    //   };
+    //   const response = await fetch(`https://client-app-blush.vercel.app/payments/${clientId}/payments`, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //       'Authorization': `Bearer ${localStorage.getItem('token')}`
+    //     },
+    //     body: JSON.stringify(paymentData)
+    //   });
 
-  //     if (!response.ok) {
-  //       throw new Error('Failed to update payment');
-  //     }
+    //   if (!response.ok) {
+    //     throw new Error('Failed to update payment');
+    //   }
 
-  //     const updatedClients = await clientService.getAll();
-  //     setClients(updatedClients);
+    //   const updatedClients = await clientService.getAll();
+    //   setClients(updatedClients);
 
-  //     setPayments(prev => ({
-  //       ...prev,
-  //       enteredAmount: {
-  //         ...prev.enteredAmount,
-  //         [clientId]: {}
-  //       },
-  //       month: '',
-  //       year: currentYear
-  //     }));
-  //   } catch (err) {
-  //     setError(err.message || 'Failed to update payment');
-  //   }
+    //   setPayments(prev => ({
+    //     ...prev,
+    //     enteredAmount: {
+    //       ...prev.enteredAmount,
+    //       [clientId]: {}
+    //     },
+    //     month: '',
+    //     year: currentYear
+    //   }));
+    // } catch (err) {
+    //   setError(err.message || 'Failed to update payment');
+    // }
   };
 
   const months = [
@@ -291,15 +291,12 @@ console.log(payments)
       }
     };
 
-    // Clear any existing timeout
     if (updatePaymentTimeoutRef.current) {
       clearTimeout(updatePaymentTimeoutRef.current);
     }
 
-    // Set new timeout
     updatePaymentTimeoutRef.current = setTimeout(updatePayment, 3000);
 
-    // Cleanup function
     return () => {
       if (updatePaymentTimeoutRef.current) {
         clearTimeout(updatePaymentTimeoutRef.current);
@@ -534,7 +531,6 @@ console.log(payments)
                                   type="text"
                                   value={payments.enteredAmount[client._id]?.[month] || payment.amount || ''}
                                   placeholder='Enter Amount...'
-                                  // placeholder={payments.enteredAmount[client._id]?.[month] || payment.amount || 'enter amout here '}
 
                                   onChange={(e) => setPayments(prev => ({
                                     ...prev,
