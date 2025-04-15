@@ -7,6 +7,7 @@ import { Edit, MoveLeft, MoveRight, Trash } from 'lucide-react';
 import Dropdown from '@/components/ui/Dropdown';
 import 'react-tooltip/dist/react-tooltip.css'
 import { Tooltip } from 'react-tooltip'
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 export default function ClientsPage() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,14 +29,24 @@ export default function ClientsPage() {
     month: '',
     year: '',
   })
+  const params = useParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonths, setSelectedMonths] = useState([]);
   const [csvFile, setCsvFile] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-  // Pagination state
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    // Clear existing month parameters
+    params.delete('month');
+    // Add each selected month as a separate 'month' parameter
+    selectedMonths.forEach(month => params.append('month', month));
+    router.push(`?${params.toString()}`);
+  }, [selectedMonths, router, searchParams]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const itemsPerPageOptions = [1, 10, 25, 50];
@@ -238,7 +249,7 @@ export default function ClientsPage() {
 console.log(payments)
   useEffect(() => {
     const updatePayment = async () => {
-      const clientId = Object.keys(payments.enteredAmount)[0];
+      const clientId = payments._id;
       if (!clientId || !payments.month) return;
 
       try {
@@ -507,14 +518,14 @@ console.log(payments)
                 <tbody className="bg-white divide-y divide-gray-200">
                   {currentClients.map(client => (
                     <tr key={client._id}>
-                      <td className="px-2 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dropdown">
-                      <button className='dropdown-button'>
+                      <td className="px-2 py-4 whitespace-nowrap text-sm font-medium text-gray-900 ">
+                      <button className=''>
                         {client.name}
                         </button>
 
-                        <div className='space-x-2.5 top-10 left-0 right-0 m-auto dropdown-content w-fit'>
-                        <button className='bg-red-500 text-white p-2 rounded-md  cursor-pointer' onClick={()=>handleDelete(client._id)}><Trash/></button>
-                        <button className='bg-blue-500 text-white p-2 rounded-md cursor-pointer' onClick={()=>handleEdit(client)}><Edit/></button>
+                        <div className='space-x-2.5 top-10 left-0 right-0 m-auto  w-fit'>
+                        <button className='bg-red-500 text-white p-2 rounded-md  cursor-pointer ' onClick={()=>handleDelete(client._id)}><Trash className='size-2'/></button>
+                        <button className='bg-blue-500 text-white p-2 rounded-md cursor-pointer ' onClick={()=>handleEdit(client)}><Edit className='size-2'/></button>
                         </div>
                         
                         </td>
@@ -542,7 +553,8 @@ console.log(payments)
                                       }
                                     },
                                     month: month,
-                                    year: currentYear
+                                    year: currentYear,
+                                    _id: client._id
                                   }))}
                                   className="w-full p-2 text-center border border-gray-300 rounded text-black"
                                 />
@@ -562,7 +574,8 @@ console.log(payments)
                                           [month]: e.target.value
                                         }
                                       },
-                                      month: month
+                                      month: month,
+                                      _id: client._id
                                     }))}
                                   />
                                   <input
@@ -577,7 +590,8 @@ console.log(payments)
                                           [month]: e.target.value
                                         }
                                       },
-                                      month: month
+                                      month: month,
+                                      _id: client._id
                                     }))}
                                     className="w-full px-2 py-2 border border-gray-300 rounded text-black"
                                   />
@@ -616,7 +630,8 @@ console.log(payments)
                                           }
                                         },
                                         month: month,
-                                        year: currentYear
+                                        year: currentYear,
+                                        _id:client._id
                                       }))}
                                       className="w-full p-2 text-center border border-gray-300 rounded text-black"
                                     />
@@ -635,7 +650,8 @@ console.log(payments)
                                               [month]: e.target.value
                                             }
                                           },
-                                          month: month
+                                          month: month,
+                                          _id: client._id
                                         }))}
                                         className="w-full px-2 py-2 border border-gray-300 rounded text-black"
                                       />
@@ -651,7 +667,8 @@ console.log(payments)
                                               [month]: e.target.value
                                             }
                                           },
-                                          month: month
+                                          month: month,
+                                          _id: client._id
                                         }))}
                                         className="w-full px-2 py-2 border border-gray-300 rounded text-black"
                                       />
